@@ -1,6 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { DEFAULT_SETTINGS, SETTINGS_CONSTRAINTS, loadSettings, saveSettings as saveSettingsToStorage, sendSettingsUpdateToTabs } from '../shared/settings'
+  import {
+    DEFAULT_SETTINGS,
+    SETTINGS_CONSTRAINTS,
+    loadSettings,
+    saveSettings as saveSettingsToStorage,
+    sendSettingsUpdateToTabs,
+  } from '../shared/settings'
   import type { ButtonSettings } from '../shared/settings'
 
   // Use centralized default settings
@@ -25,8 +31,8 @@
     try {
       await saveSettingsToStorage(settings)
       saved = true
-      setTimeout(() => saved = false, 1500)
-      
+      setTimeout(() => (saved = false), 1500)
+
       // Send message to content script to update settings
       sendSettingsUpdateToTabs(settings)
     } catch (error) {
@@ -63,7 +69,14 @@
 
     <div class="setting-row">
       <label for="size">Size:</label>
-      <input id="size" type="range" bind:value={settings.buttonSize} min={SETTINGS_CONSTRAINTS.buttonSize.min} max={SETTINGS_CONSTRAINTS.buttonSize.max} class="slider" />
+      <input
+        id="size"
+        type="range"
+        bind:value={settings.buttonSize}
+        min={SETTINGS_CONSTRAINTS.buttonSize.min}
+        max={SETTINGS_CONSTRAINTS.buttonSize.max}
+        class="slider"
+      />
       <span class="value">{settings.buttonSize}px</span>
     </div>
 
@@ -80,23 +93,25 @@
         Auto-hide when unfocused
       </label>
     </div>
-
   </div>
-  
 
   <div class="actions">
     {#if saved}
       <div class="saved-indicator">✓ Saved!</div>
     {/if}
-    <button class="options-btn" on:click={openOptionsPage}>
-      More Options
-    </button>
+    <button class="options-btn" on:click={openOptionsPage}> More Options </button>
   </div>
 </main>
 
 <style>
   :global(:root) {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
     color-scheme: light dark;
   }
 
@@ -205,8 +220,6 @@
     text-align: right;
   }
 
-  
-
   .actions {
     display: flex;
     justify-content: space-between;
@@ -235,23 +248,7 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 
-  input[type="checkbox"] {
+  input[type='checkbox'] {
     accent-color: #667eea;
   }
-
-  .api-key-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .api-input {
-    width: 100%;
-    max-width: none;
-    padding: 6px 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    margin-top: 4px;
-  }
 </style>
-
