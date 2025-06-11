@@ -58,13 +58,29 @@
 
   <div class="quick-settings">
     <div class="setting-row">
-      <label for="position">Position:</label>
-      <select id="position" bind:value={settings.buttonPosition} class="compact">
-        <option value="right">Right</option>
-        <option value="left">Left</option>
-        <option value="top">Top</option>
-        <option value="bottom">Bottom</option>
-      </select>
+      <label for="offsetX">X Offset:</label>
+      <input
+        id="offsetX"
+        type="number"
+        bind:value={settings.offsetX}
+        min={SETTINGS_CONSTRAINTS.offsetX.min}
+        max={SETTINGS_CONSTRAINTS.offsetX.max}
+        class="offset-input"
+      />
+      <span class="unit">px</span>
+    </div>
+
+    <div class="setting-row">
+      <label for="offsetY">Y Offset:</label>
+      <input
+        id="offsetY"
+        type="number"
+        bind:value={settings.offsetY}
+        min={SETTINGS_CONSTRAINTS.offsetY.min}
+        max={SETTINGS_CONSTRAINTS.offsetY.max}
+        class="offset-input"
+      />
+      <span class="unit">px</span>
     </div>
 
     <div class="setting-row">
@@ -93,6 +109,21 @@
         Auto-hide when unfocused
       </label>
     </div>
+
+    {#if settings.autoHide}
+      <div class="setting-row">
+        <label for="hideDelay">Hide delay:</label>
+        <input
+          id="hideDelay"
+          type="number"
+          bind:value={settings.hideDelay}
+          min={SETTINGS_CONSTRAINTS.hideDelay.min}
+          max={SETTINGS_CONSTRAINTS.hideDelay.max}
+          class="delay-input"
+        />
+        <span class="unit">ms</span>
+      </div>
+    {/if}
   </div>
 
   <div class="actions">
@@ -164,12 +195,14 @@
     justify-content: space-between;
     margin-bottom: 12px;
     font-size: 0.9rem;
+    gap: 8px;
   }
 
   label {
     font-weight: 500;
     color: #555;
-    min-width: 60px;
+    min-width: 70px;
+    flex-shrink: 0;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -183,23 +216,25 @@
     align-items: center;
     min-width: auto;
     cursor: pointer;
+    flex: 1;
   }
 
   .checkbox-label input {
     margin-right: 8px;
   }
 
-  select.compact {
-    padding: 4px 8px;
+  .offset-input, .delay-input {
+    width: 60px;
+    padding: 4px 6px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 0.85rem;
+    text-align: center;
     background: white;
-    min-width: 80px;
   }
 
   @media (prefers-color-scheme: dark) {
-    select.compact {
+    .offset-input, .delay-input {
       background: #333;
       border-color: #555;
       color: #fff;
@@ -212,12 +247,13 @@
     accent-color: #667eea;
   }
 
-  .value {
+  .value, .unit {
     font-size: 0.8rem;
     color: #667eea;
     font-weight: 600;
     min-width: 35px;
     text-align: right;
+    flex-shrink: 0;
   }
 
   .actions {
