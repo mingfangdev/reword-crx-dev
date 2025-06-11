@@ -11,6 +11,7 @@ A Chrome extension that adds a floating AI-powered rewording button to text inpu
 - **Hover/Focus Modes**: Show button on hover or focus events
 - **Auto-hide**: Configurable auto-hide behavior with custom delays
 - **AI Integration**: Powered by OpenRouter API with customizable prompts
+- **Lightweight**: Focused on core functionality without background scripts or additional tabs
 
 ## Installation
 
@@ -89,6 +90,24 @@ bun run type-check
 Get your OpenRouter API key from [openrouter.ai/keys](https://openrouter.ai/keys) and configure it in the extension options.
 
 The extension uses the `deepseek/deepseek-chat-v3-0324:free` model by default, but this can be configured in the code.
+
+## Permissions
+
+The extension requires minimal permissions:
+
+- **activeTab**: To access and modify text content on the currently active tab
+- **storage**: To save your preferences and settings locally
+- **sidePanel**: To provide the side panel interface
+- **openrouter.ai**: To communicate with the OpenRouter API for text processing
+
+## Architecture
+
+This extension follows a lightweight architecture:
+
+- **Content Script**: Handles text detection, button positioning, and user interactions
+- **Options Page**: Provides configuration interface for settings and API keys
+- **Side Panel**: Additional interface for extension management
+- **No Background Script**: Simplified architecture without persistent background processes
 
 ## License
 
