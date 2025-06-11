@@ -13,6 +13,16 @@ export interface Env {
 }
 
 /**
+ * Check if we're in development mode
+ */
+export const isDev = getEnvVariables().DEV
+
+/**
+ * Check if we're in production mode
+ */
+export const isProd = getEnvVariables().PROD
+
+/**
  * Get environment variables with proper fallback handling
  */
 function getEnvVariables() {
@@ -35,7 +45,7 @@ function validateEnv(): Env {
   const variables = getEnvVariables()
   const openRouterApiKey = variables.VITE_OPEN_ROUTER_API
 
-  if (!openRouterApiKey) {
+  if (!openRouterApiKey && isDev) {
     throw new Error(
       'VITE_OPEN_ROUTER_API is required but not provided in .env file. ' +
         'Please create a .env file with VITE_OPEN_ROUTER_API=your-api-key',
@@ -52,13 +62,3 @@ function validateEnv(): Env {
  * This will throw an error during initialization if required vars are missing
  */
 export const env: Env = validateEnv()
-
-/**
- * Check if we're in development mode
- */
-export const isDev = getEnvVariables().DEV
-
-/**
- * Check if we're in production mode
- */
-export const isProd = getEnvVariables().PROD

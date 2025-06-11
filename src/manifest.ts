@@ -20,11 +20,6 @@ export default defineManifest({
     default_icon: 'img/logo-48.png',
   },
   options_page: 'options.html',
-  devtools_page: 'devtools.html',
-  background: {
-    service_worker: 'src/background/index.ts',
-    type: 'module',
-  },
   content_scripts: [
     {
       matches: ['http://*/*', 'https://*/*'],
@@ -40,8 +35,6 @@ export default defineManifest({
       matches: [],
     },
   ],
-  permissions: ['sidePanel', 'storage', 'tabs'],
-  chrome_url_overrides: {
-    newtab: 'newtab.html',
-  },
+  permissions: ['sidePanel', 'storage', 'activeTab'],
+  host_permissions: ['https://openrouter.ai/*'],
 })
