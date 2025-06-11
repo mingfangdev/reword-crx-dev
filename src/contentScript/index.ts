@@ -3,20 +3,45 @@ import OpenAI from 'openai'
 import { DEFAULT_SETTINGS, type ButtonSettings, loadSettings } from '../shared/settings'
 import { env } from '../shared/env'
 
+// Types for different input element configurations
+interface ElementConfig {
+  type: 'input' | 'textarea' | 'akEditor' | 'contentEditable'
+  element: HTMLElement
+  selector?: string
+}
+
 class FloatingButtonManager {
   private currentButton: HTMLElement | null = null
   private currentTarget: HTMLElement | null = null
+  private currentConfig: ElementConfig | null = null
   private svelteComponent: any = null
   private isProcessing: boolean = false
   private settings: ButtonSettings = DEFAULT_SETTINGS
+  private domainOverrides: Record<string, Partial<ButtonSettings>> = {}
 
   constructor() {
     this.loadSettings()
+    this.loadDomainOverrides()
     this.init()
   }
 
   private async loadSettings() {
     this.settings = await loadSettings()
+  }
+
+  private async loadDomainOverrides() {
+    try {
+      const result = await chrome.storage.sync.get(['rewordDomainOverrides'])
+      this.domainOverrides = result.rewordDomainOverrides || {}
+    } catch (error) {
+      console.warn('Failed to load domain overrides:', error)
+    }
+  }
+
+  private getEffectiveSettings(): ButtonSettings {
+    const hostname = window.location.hostname
+    const overrides = this.domainOverrides[hostname] || {}
+    return { ...this.settings, ...overrides }
   }
 
   private init() {
@@ -38,21 +63,28 @@ class FloatingButtonManager {
         this.settings = { ...this.settings, ...request.settings }
         this.updateButtonAppearance()
         sendResponse({ success: true })
+      } else if (request.type === 'DOMAIN_OVERRIDES_UPDATED') {
+        this.domainOverrides = request.overrides
+        this.updateButtonAppearance()
+        sendResponse({ success: true })
       }
     })
   }
 
   private handleMouseOver(event: MouseEvent) {
-    if (!this.settings.showOnHover) return
+    const effectiveSettings = this.getEffectiveSettings()
+    if (!effectiveSettings.showOnHover) return
 
     const target = event.target as HTMLElement
-    if (this.isInputOrTextarea(target)) {
-      this.showButton(target)
+    const config = this.detectInputElement(target)
+    if (config) {
+      this.showButton(config)
     }
   }
 
   private handleMouseOut(event: MouseEvent) {
-    if (!this.settings.showOnHover) return
+    const effectiveSettings = this.getEffectiveSettings()
+    if (!effectiveSettings.showOnHover) return
 
     setTimeout(() => {
       const hoveredElement = document.elementFromPoint(event.clientX, event.clientY)
@@ -67,34 +99,71 @@ class FloatingButtonManager {
 
   private handleFocusIn(event: FocusEvent) {
     const target = event.target as HTMLElement
+    const config = this.detectInputElement(target)
 
-    if (this.isInputOrTextarea(target)) {
-      if (!this.settings.showOnHover) {
-        this.showButton(target)
+    if (config) {
+      const effectiveSettings = this.getEffectiveSettings()
+      if (!effectiveSettings.showOnHover) {
+        this.showButton(config)
       }
     }
   }
 
   private handleFocusOut(event: FocusEvent) {
-    if (!this.settings.autoHide) return
+    const effectiveSettings = this.getEffectiveSettings()
+    if (!effectiveSettings.autoHide) return
 
     // Small delay to allow clicking the button before it disappears
     setTimeout(() => {
       if (document.activeElement !== this.currentTarget && !this.isProcessing) {
         this.hideButton()
       }
-    }, this.settings.hideDelay)
+    }, effectiveSettings.hideDelay)
   }
 
-  private isInputOrTextarea(element: HTMLElement): boolean {
-    return element.tagName === 'INPUT' || element.tagName === 'TEXTAREA'
+  private detectInputElement(element: HTMLElement): ElementConfig | null {
+    // Check for akEditor first
+    const akEditorContent = element.closest('.akEditor')?.querySelector('.ak-editor-content-area') as HTMLElement
+    if (akEditorContent) {
+      return {
+        type: 'akEditor',
+        element: akEditorContent,
+        selector: '.akEditor .ak-editor-content-area'
+      }
+    }
+
+    // Check if the element itself is the akEditor content area
+    if (element.classList.contains('ak-editor-content-area')) {
+      return {
+        type: 'akEditor',
+        element: element,
+        selector: '.ak-editor-content-area'
+      }
+    }
+
+    // Check for standard input and textarea
+    if (element.tagName === 'INPUT') {
+      return { type: 'input', element }
+    }
+
+    if (element.tagName === 'TEXTAREA') {
+      return { type: 'textarea', element }
+    }
+
+    // Check for contentEditable elements
+    if (element.contentEditable === 'true') {
+      return { type: 'contentEditable', element }
+    }
+
+    return null
   }
 
-  private showButton(target: HTMLElement) {
+  private showButton(config: ElementConfig) {
     // Remove existing button if any
     this.hideButton()
 
-    this.currentTarget = target
+    this.currentTarget = config.element
+    this.currentConfig = config
 
     // Create button container
     const buttonContainer = document.createElement('div')
@@ -105,6 +174,8 @@ class FloatingButtonManager {
       pointer-events: auto;
     `
 
+    const effectiveSettings = this.getEffectiveSettings()
+
     // Mount Svelte component
     this.svelteComponent = new FloatingButton({
       target: buttonContainer,
@@ -112,7 +183,7 @@ class FloatingButtonManager {
         onClick: () => {
           this.rewordText()
         },
-        size: this.settings.buttonSize,
+        size: effectiveSettings.buttonSize,
         state: 'default',
       },
     })
@@ -134,19 +205,22 @@ class FloatingButtonManager {
       this.currentButton.remove()
       this.currentButton = null
       this.currentTarget = null
+      this.currentConfig = null
     }
   }
 
   private updateButtonAppearance() {
+    const effectiveSettings = this.getEffectiveSettings()
     if (this.svelteComponent) {
-      this.svelteComponent.$set({ size: this.settings.buttonSize })
+      this.svelteComponent.$set({ size: effectiveSettings.buttonSize })
     }
     this.repositionButton()
   }
 
   private async rewordText() {
+    const effectiveSettings = this.getEffectiveSettings()
     // Get API key from settings or fallback to env file
-    const apiKey = this.settings.openRouterApiKey || env.OPEN_ROUTER_API
+    const apiKey = effectiveSettings.openRouterApiKey || env.OPEN_ROUTER_API
 
     if (!this.currentTarget || this.isProcessing || !apiKey) {
       if (!apiKey) {
@@ -156,8 +230,7 @@ class FloatingButtonManager {
       return
     }
 
-    const target = this.currentTarget as HTMLInputElement | HTMLTextAreaElement
-    const selectedText = this.getSelectedText(target)
+    const selectedText = this.getSelectedText()
 
     if (!selectedText.trim()) {
       alert('Please select some text to rephrase.')
@@ -183,7 +256,7 @@ class FloatingButtonManager {
         messages: [
           {
             role: 'system',
-            content: this.settings.rewordPrompt,
+            content: effectiveSettings.rewordPrompt,
           },
           {
             role: 'user',
@@ -194,7 +267,7 @@ class FloatingButtonManager {
 
       const rewordedText = completion.choices[0]?.message?.content
       if (rewordedText) {
-        this.replaceSelectedText(target, rewordedText.trim())
+        this.replaceSelectedText(rewordedText.trim())
         this.updateButtonState('success')
       } else {
         throw new Error('No response from AI')
@@ -211,39 +284,102 @@ class FloatingButtonManager {
     }
   }
 
-  private getSelectedText(element: HTMLInputElement | HTMLTextAreaElement): string {
-    const start = element.selectionStart || 0
-    const end = element.selectionEnd || 0
+  private getSelectedText(): string {
+    if (!this.currentTarget || !this.currentConfig) return ''
 
-    if (start === end) {
-      // If no text is selected, select all text
-      return element.value
+    switch (this.currentConfig.type) {
+      case 'input':
+      case 'textarea': {
+        const element = this.currentTarget as HTMLInputElement | HTMLTextAreaElement
+        const start = element.selectionStart || 0
+        const end = element.selectionEnd || 0
+
+        if (start === end) {
+          // If no text is selected, select all text
+          return element.value
+        }
+
+        return element.value.substring(start, end)
+      }
+
+      case 'akEditor':
+      case 'contentEditable': {
+        const selection = window.getSelection()
+        if (selection && selection.rangeCount > 0) {
+          const selectedText = selection.toString()
+          if (selectedText.trim()) {
+            return selectedText
+          }
+        }
+        // If no text is selected, get all text content
+        return this.currentTarget.textContent || ''
+      }
+
+      default:
+        return ''
     }
-
-    return element.value.substring(start, end)
   }
 
-  private replaceSelectedText(element: HTMLInputElement | HTMLTextAreaElement, newText: string) {
-    const start = element.selectionStart || 0
-    const end = element.selectionEnd || 0
+  private replaceSelectedText(newText: string) {
+    if (!this.currentTarget || !this.currentConfig) return
 
-    if (start === end) {
-      // If no text was selected, replace all text
-      element.value = newText
-    } else {
-      // Replace selected text
-      const before = element.value.substring(0, start)
-      const after = element.value.substring(end)
-      element.value = before + newText + after
+    switch (this.currentConfig.type) {
+      case 'input':
+      case 'textarea': {
+        const element = this.currentTarget as HTMLInputElement | HTMLTextAreaElement
+        const start = element.selectionStart || 0
+        const end = element.selectionEnd || 0
 
-      // Set cursor position after the new text
-      const newCursorPos = start + newText.length
-      element.setSelectionRange(newCursorPos, newCursorPos)
+        if (start === end) {
+          // If no text was selected, replace all text
+          element.value = newText
+        } else {
+          // Replace selected text
+          const before = element.value.substring(0, start)
+          const after = element.value.substring(end)
+          element.value = before + newText + after
+
+          // Set cursor position after the new text
+          const newCursorPos = start + newText.length
+          element.setSelectionRange(newCursorPos, newCursorPos)
+        }
+
+        // Trigger input event to notify other scripts
+        element.dispatchEvent(new Event('input', { bubbles: true }))
+        element.focus()
+        break
+      }
+
+      case 'akEditor':
+      case 'contentEditable': {
+        const selection = window.getSelection()
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0)
+          
+          if (range.collapsed) {
+            // If no text was selected, replace all content
+            this.currentTarget.textContent = newText
+          } else {
+            // Replace selected text
+            range.deleteContents()
+            range.insertNode(document.createTextNode(newText))
+            
+            // Move cursor to end of inserted text
+            range.collapse(false)
+            selection.removeAllRanges()
+            selection.addRange(range)
+          }
+        } else {
+          // Fallback: replace all content
+          this.currentTarget.textContent = newText
+        }
+
+        // Trigger input event for akEditor and other systems
+        this.currentTarget.dispatchEvent(new Event('input', { bubbles: true }))
+        this.currentTarget.focus()
+        break
+      }
     }
-
-    // Trigger input event to notify other scripts
-    element.dispatchEvent(new Event('input', { bubbles: true }))
-    element.focus()
   }
 
   private updateButtonState(state: 'default' | 'processing' | 'success' | 'error') {
@@ -253,35 +389,16 @@ class FloatingButtonManager {
   }
 
   private repositionButton() {
-    if (!this.currentButton || !this.currentTarget) return
+    if (!this.currentButton || !this.currentTarget || !this.currentConfig) return
 
     const rect = this.currentTarget.getBoundingClientRect()
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft
     const scrollY = window.pageYOffset || document.documentElement.scrollTop
+    const effectiveSettings = this.getEffectiveSettings()
 
-    let left: string, top: string
-
-    switch (this.settings.buttonPosition) {
-      case 'right':
-        left = `${rect.right + scrollX + this.settings.offsetX}px`
-        top = `${rect.top + scrollY + this.settings.offsetY}px`
-        break
-      case 'left':
-        left = `${rect.left + scrollX - this.settings.buttonSize - Math.abs(this.settings.offsetX)}px`
-        top = `${rect.top + scrollY + this.settings.offsetY}px`
-        break
-      case 'top':
-        left = `${rect.left + scrollX + rect.width / 2 - this.settings.buttonSize / 2}px`
-        top = `${rect.top + scrollY - this.settings.buttonSize - Math.abs(this.settings.offsetY)}px`
-        break
-      case 'bottom':
-        left = `${rect.left + scrollX + rect.width / 2 - this.settings.buttonSize / 2}px`
-        top = `${rect.bottom + scrollY + this.settings.offsetY}px`
-        break
-      default:
-        left = `${rect.right + scrollX + this.settings.offsetX}px`
-        top = `${rect.top + scrollY + this.settings.offsetY}px`
-    }
+    // Always position at bottom-right corner of the element
+    const left = `${rect.right + scrollX + effectiveSettings.offsetX}px`
+    const top = `${rect.bottom + scrollY + effectiveSettings.offsetY}px`
 
     this.currentButton.style.left = left
     this.currentButton.style.top = top

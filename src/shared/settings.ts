@@ -1,5 +1,4 @@
 export interface ButtonSettings {
-  buttonPosition: 'right' | 'left' | 'top' | 'bottom'
   offsetX: number
   offsetY: number
   buttonSize: number
@@ -10,8 +9,12 @@ export interface ButtonSettings {
   rewordPrompt: string
 }
 
+export interface DomainOverride {
+  domain: string
+  settings: Partial<ButtonSettings>
+}
+
 export const DEFAULT_SETTINGS: ButtonSettings = {
-  buttonPosition: 'right',
   offsetX: 16,
   offsetY: 4,
   buttonSize: 32,
@@ -51,6 +54,40 @@ export async function saveSettings(settings: ButtonSettings): Promise<void> {
   })
 }
 
+export async function loadDomainOverrides(): Promise<Record<string, Partial<ButtonSettings>>> {
+  try {
+    const result = await chrome.storage.sync.get(['rewordDomainOverrides'])
+    return result.rewordDomainOverrides || {}
+  } catch (error) {
+    console.warn('Failed to load domain overrides:', error)
+    return {}
+  }
+}
+
+export async function saveDomainOverrides(overrides: Record<string, Partial<ButtonSettings>>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.set({ rewordDomainOverrides: overrides }, () => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
+export async function addDomainOverride(domain: string, overrideSettings: Partial<ButtonSettings>): Promise<void> {
+  const overrides = await loadDomainOverrides()
+  overrides[domain] = overrideSettings
+  await saveDomainOverrides(overrides)
+}
+
+export async function removeDomainOverride(domain: string): Promise<void> {
+  const overrides = await loadDomainOverrides()
+  delete overrides[domain]
+  await saveDomainOverrides(overrides)
+}
+
 export function sendSettingsUpdateToTabs(settings: ButtonSettings): void {
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach(tab => {
@@ -58,6 +95,21 @@ export function sendSettingsUpdateToTabs(settings: ButtonSettings): void {
         chrome.tabs.sendMessage(tab.id, {
           type: 'SETTINGS_UPDATED',
           settings: settings
+        }).catch(() => {
+          // Ignore errors for tabs without content script
+        })
+      }
+    })
+  })
+}
+
+export function sendDomainOverridesUpdateToTabs(overrides: Record<string, Partial<ButtonSettings>>): void {
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+      if (tab.id) {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'DOMAIN_OVERRIDES_UPDATED',
+          overrides: overrides
         }).catch(() => {
           // Ignore errors for tabs without content script
         })
