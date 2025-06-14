@@ -20,16 +20,41 @@
   let newDomain = ''
   let newOverrideSettings: Partial<ButtonSettings> = {
     offsetX: 16,
-    offsetY: 4
+    offsetY: 4,
+    rewordPrompt: ''
   }
 
   let saved = false
 
-  // Common akEditor domain presets
+  // Common domain presets with both position and prompt overrides
   const commonDomainPresets = [
-    { domain: 'atlassian.net', name: 'Atlassian Cloud (Jira/Confluence)', settings: { offsetX: -8, offsetY: 8 } },
-    { domain: 'jira.com', name: 'Jira', settings: { offsetX: -8, offsetY: 8 } },
-    { domain: 'confluence.com', name: 'Confluence', settings: { offsetX: -8, offsetY: 8 } }
+    { 
+      domain: 'atlassian.net', 
+      name: 'Atlassian Cloud (Jira/Confluence)', 
+      settings: { 
+        offsetX: -8, 
+        offsetY: 8,
+        rewordPrompt: 'Rephrase the provided text into a formal comment suitable for Jira/Confluence. Use professional tone and clear structure.'
+      } 
+    },
+    { 
+      domain: 'jira.com', 
+      name: 'Jira', 
+      settings: { 
+        offsetX: -8, 
+        offsetY: 8,
+        rewordPrompt: 'Rephrase the provided text into a formal Jira comment. Be concise, professional, and action-oriented.'
+      } 
+    },
+    { 
+      domain: 'confluence.com', 
+      name: 'Confluence', 
+      settings: { 
+        offsetX: -8, 
+        offsetY: 8,
+        rewordPrompt: 'Rephrase the provided text for Confluence documentation. Use clear, informative language suitable for team collaboration.'
+      } 
+    }
   ]
 
   onMount(async () => {
@@ -71,7 +96,8 @@
       newDomain = ''
       newOverrideSettings = {
         offsetX: 16,
-        offsetY: 4
+        offsetY: 4,
+        rewordPrompt: ''
       }
       saveDomainOverridesData()
     }
@@ -104,10 +130,17 @@
   <h1>Reword Extension Settings</h1>
 
   <div class="settings-section">
-    <h3>Button Position</h3>
+    <h3>Button Appearance</h3>
     <p class="section-description">
-      The button always appears at the bottom-right corner of input elements. Use offsets to fine-tune the position.
+      Configure the button's visual appearance and position. The button appears at the bottom-right corner of input elements.
     </p>
+
+    <div class="setting-group">
+      <label>
+        Button size (px):
+        <input type="number" bind:value={settings.buttonSize} min={SETTINGS_CONSTRAINTS.buttonSize.min} max={SETTINGS_CONSTRAINTS.buttonSize.max} />
+      </label>
+    </div>
 
     <div class="setting-group">
       <label>
@@ -122,16 +155,6 @@
         Vertical offset (px):
         <input type="number" bind:value={settings.offsetY} min={SETTINGS_CONSTRAINTS.offsetY.min} max={SETTINGS_CONSTRAINTS.offsetY.max} />
         <small>Positive values move the button down, negative values move it up</small>
-      </label>
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <h3>Button Appearance</h3>
-    <div class="setting-group">
-      <label>
-        Button size (px):
-        <input type="number" bind:value={settings.buttonSize} min={SETTINGS_CONSTRAINTS.buttonSize.min} max={SETTINGS_CONSTRAINTS.buttonSize.max} />
       </label>
     </div>
   </div>
@@ -152,20 +175,13 @@
       </label>
     </div>
 
-    {#if settings.autoHide}
-      <div class="setting-group">
-        <label>
-          Hide delay (ms):
-          <input type="number" bind:value={settings.hideDelay} min={SETTINGS_CONSTRAINTS.hideDelay.min} max={SETTINGS_CONSTRAINTS.hideDelay.max} />
-        </label>
-      </div>
-    {/if}
+
   </div>
 
   <div class="settings-section">
     <h3>Domain-Specific Overrides</h3>
     <p class="section-description">
-      Configure different button positions for specific websites. Useful for websites with unique layouts like akEditor (Jira/Confluence).
+      Configure custom button positions and prompts for specific websites. Each domain can have its own button positioning and AI prompt settings.
     </p>
     
     <!-- Common domain presets -->
@@ -187,30 +203,52 @@
     <!-- Add new domain override -->
     <div class="domain-override-form">
       <h4>Custom Domain Override</h4>
-      <div class="form-row">
-        <input 
-          type="text" 
-          bind:value={newDomain} 
-          placeholder="example.com" 
-          class="domain-input"
-        />
-        <input 
-          type="number" 
-          bind:value={newOverrideSettings.offsetX} 
-          placeholder="X offset"
-          min={SETTINGS_CONSTRAINTS.offsetX.min} 
-          max={SETTINGS_CONSTRAINTS.offsetX.max}
-          class="offset-input"
-        />
-        <input 
-          type="number" 
-          bind:value={newOverrideSettings.offsetY} 
-          placeholder="Y offset"
-          min={SETTINGS_CONSTRAINTS.offsetY.min} 
-          max={SETTINGS_CONSTRAINTS.offsetY.max}
-          class="offset-input"
-        />
-        <button class="add-btn" on:click={addDomainOverride}>Add Custom</button>
+      <div class="form-column">
+        <div class="form-row">
+          <label>
+            Domain:
+            <input 
+              type="text" 
+              bind:value={newDomain} 
+              placeholder="example.com" 
+              class="domain-input"
+            />
+          </label>
+          <label>
+            X Offset:
+            <input 
+              type="number" 
+              bind:value={newOverrideSettings.offsetX} 
+              placeholder="16"
+              min={SETTINGS_CONSTRAINTS.offsetX.min} 
+              max={SETTINGS_CONSTRAINTS.offsetX.max}
+              class="offset-input"
+            />
+          </label>
+          <label>
+            Y Offset:
+            <input 
+              type="number" 
+              bind:value={newOverrideSettings.offsetY} 
+              placeholder="4"
+              min={SETTINGS_CONSTRAINTS.offsetY.min} 
+              max={SETTINGS_CONSTRAINTS.offsetY.max}
+              class="offset-input"
+            />
+          </label>
+        </div>
+        <div class="form-textarea-row">
+          <label>
+            Custom Prompt (Optional):
+            <textarea 
+              bind:value={newOverrideSettings.rewordPrompt} 
+              placeholder="Enter custom prompt for this domain..." 
+              class="prompt-textarea"
+              rows="3"
+            ></textarea>
+          </label>
+        </div>
+        <button class="add-btn" on:click={addDomainOverride}>Add Custom Override</button>
       </div>
     </div>
 
@@ -219,11 +257,24 @@
       <div class="domain-overrides-list">
         {#each Object.entries(domainOverrides) as [domain, override]}
           <div class="domain-override-item">
-            <span class="domain-name">{domain}</span>
-            <span class="override-details">
-              Offset: ({override.offsetX || 16}, {override.offsetY || 4})
-            </span>
-            <button class="remove-btn" on:click={() => removeDomainOverride(domain)}>×</button>
+            <div class="override-header">
+              <span class="domain-name">{domain}</span>
+              <button class="remove-btn" on:click={() => removeDomainOverride(domain)}>×</button>
+            </div>
+            <div class="override-details">
+              <div class="override-position">
+                Position: ({override.offsetX || 16}, {override.offsetY || 4})
+              </div>
+              {#if override.rewordPrompt}
+                <div class="override-prompt">
+                  <strong>Custom Prompt:</strong> {override.rewordPrompt.substring(0, 100)}{override.rewordPrompt.length > 100 ? '...' : ''}
+                </div>
+              {:else}
+                <div class="override-prompt-default">
+                  Using default prompt
+                </div>
+              {/if}
+            </div>
           </div>
         {/each}
       </div>
@@ -349,12 +400,12 @@
   }
 
   label {
-    display: block;
-    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     font-weight: 500;
     font-size: 14px;
     color: #555;
-    align-self: flex-start;
   }
 
   .textarea-group {
@@ -364,7 +415,6 @@
   }
 
   .textarea-group label {
-    margin-bottom: 8px;
     align-self: flex-start;
   }
 
@@ -376,23 +426,26 @@
 
   input, textarea {
     width: 100%;
-    max-width: 200px;
-    padding: 8px 12px;
+    padding: 10px 12px;
     border: 2px solid #ddd;
     border-radius: 6px;
     font-size: 14px;
-    margin-top: 4px;
     font-family: inherit;
+    box-sizing: border-box;
   }
 
   textarea {
-    max-width: 400px;
+    max-width: 100%;
     resize: vertical;
     min-height: 80px;
   }
 
   input[type="password"] {
-    max-width: 300px;
+    max-width: 350px;
+  }
+
+  input[type="number"] {
+    max-width: 120px;
   }
 
   small {
@@ -473,8 +526,6 @@
     }
   }
 
-
-
   .section-description {
     font-size: 14px;
     color: #666;
@@ -491,8 +542,6 @@
   .preset-domains {
     margin-bottom: 24px;
   }
-
-
 
   .preset-buttons {
     display: flex;
@@ -545,34 +594,69 @@
     margin-bottom: 20px;
   }
 
+  .form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 
   .form-row {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .form-textarea-row {
     display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    margin-bottom: 12px;
   }
 
   .domain-input {
-    max-width: 150px;
+    width: 100%;
   }
 
   .offset-input {
-    max-width: 80px;
+    width: 100%;
+  }
+
+  .prompt-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .prompt-textarea {
+      background: #333;
+      border-color: #555;
+      color: #fff;
+    }
   }
 
   .add-btn {
-    padding: 8px 16px;
+    padding: 12px 24px;
     background: #667eea;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    align-self: flex-start;
   }
 
   .add-btn:hover {
     background: #5a6fd8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 
   .domain-overrides-list {
@@ -580,14 +664,11 @@
   }
 
   .domain-override-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
+    padding: 16px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     border-radius: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -597,10 +678,17 @@
     }
   }
 
+  .override-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
   .domain-name {
     font-weight: 600;
     color: #333;
-    min-width: 120px;
+    font-size: 16px;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -610,14 +698,39 @@
   }
 
   .override-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .override-position {
     font-size: 14px;
     color: #666;
-    flex-grow: 1;
+  }
+
+  .override-prompt {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.4;
+  }
+
+  .override-prompt-default {
+    font-size: 13px;
+    color: #999;
+    font-style: italic;
   }
 
   @media (prefers-color-scheme: dark) {
-    .override-details {
+    .override-position {
       color: #ccc;
+    }
+
+    .override-prompt {
+      color: #bbb;
+    }
+
+    .override-prompt-default {
+      color: #777;
     }
   }
 

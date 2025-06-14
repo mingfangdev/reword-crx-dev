@@ -120,7 +120,7 @@ class FloatingButtonManager {
       if (document.activeElement !== this.currentTarget && !this.isProcessing) {
         this.hideButton()
       }
-    }, effectiveSettings.hideDelay)
+    }, 150)
   }
 
   private detectInputElement(element: HTMLElement): ElementConfig | null {

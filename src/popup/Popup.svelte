@@ -110,20 +110,7 @@
       </label>
     </div>
 
-    {#if settings.autoHide}
-      <div class="setting-row">
-        <label for="hideDelay">Hide delay:</label>
-        <input
-          id="hideDelay"
-          type="number"
-          bind:value={settings.hideDelay}
-          min={SETTINGS_CONSTRAINTS.hideDelay.min}
-          max={SETTINGS_CONSTRAINTS.hideDelay.max}
-          class="delay-input"
-        />
-        <span class="unit">ms</span>
-      </div>
-    {/if}
+
   </div>
 
   <div class="actions">
@@ -223,7 +210,7 @@
     margin-right: 8px;
   }
 
-  .offset-input, .delay-input {
+  .offset-input {
     width: 60px;
     padding: 4px 6px;
     border: 1px solid #ddd;
@@ -234,7 +221,7 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    .offset-input, .delay-input {
+    .offset-input {
       background: #333;
       border-color: #555;
       color: #fff;

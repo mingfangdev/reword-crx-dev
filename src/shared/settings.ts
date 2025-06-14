@@ -4,7 +4,6 @@ export interface ButtonSettings {
   buttonSize: number
   showOnHover: boolean
   autoHide: boolean
-  hideDelay: number
   openRouterApiKey: string
   rewordPrompt: string
 }
@@ -20,7 +19,6 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
   buttonSize: 32,
   showOnHover: false,
   autoHide: true,
-  hideDelay: 150,
   openRouterApiKey: '',
   rewordPrompt: 'Rephrase the provided text into a formal comment suitable for Jira. Return only the rephrased comment without any additional text, explanations, or introductions. Ensure the tone is professional, clear, and concise, avoiding colloquial language or contractions.'
 }
@@ -28,8 +26,7 @@ export const DEFAULT_SETTINGS: ButtonSettings = {
 export const SETTINGS_CONSTRAINTS = {
   offsetX: { min: -50, max: 100 },
   offsetY: { min: -50, max: 100 },
-  buttonSize: { min: 24, max: 48 },
-  hideDelay: { min: 0, max: 1000 }
+  buttonSize: { min: 24, max: 48 }
 } as const
 
 export async function loadSettings(): Promise<ButtonSettings> {
