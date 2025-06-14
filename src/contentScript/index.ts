@@ -18,6 +18,8 @@ class FloatingButtonManager {
   private isProcessing: boolean = false
   private settings: ButtonSettings = DEFAULT_SETTINGS
   private domainOverrides: Record<string, Partial<ButtonSettings>> = {}
+  private resizeObserver: ResizeObserver | null = null
+  private inputDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     this.loadSettings()
@@ -122,7 +124,18 @@ class FloatingButtonManager {
   }
 
   private detectInputElement(element: HTMLElement): ElementConfig | null {
-    // Check for akEditor first
+    // Check for Jira comment editor first
+    if (element.getAttribute('role') === 'textbox' && 
+        element.getAttribute('data-testid')?.includes('comment-text-area') ||
+        element.classList.contains('ProseMirror')) {
+      return {
+        type: 'contentEditable',
+        element: element,
+        selector: '[role="textbox"][data-testid*="comment-text-area"], .ProseMirror'
+      }
+    }
+
+    // Check for akEditor
     const akEditorContent = element.closest('.akEditor')?.querySelector('.ak-editor-content-area') as HTMLElement
     if (akEditorContent) {
       return {
@@ -191,6 +204,12 @@ class FloatingButtonManager {
     document.body.appendChild(buttonContainer)
     this.currentButton = buttonContainer
 
+    // Set up ResizeObserver to monitor element dimension changes
+    this.setupResizeObserver()
+    
+    // Set up input event listener for debounced repositioning
+    this.setupInputListener()
+
     this.repositionButton()
   }
 
@@ -200,6 +219,18 @@ class FloatingButtonManager {
       if (this.svelteComponent) {
         this.svelteComponent.$destroy()
         this.svelteComponent = null
+      }
+
+      // Clean up ResizeObserver
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect()
+        this.resizeObserver = null
+      }
+
+      // Clear input debounce timer
+      if (this.inputDebounceTimer) {
+        clearTimeout(this.inputDebounceTimer)
+        this.inputDebounceTimer = null
       }
 
       this.currentButton.remove()
@@ -219,7 +250,6 @@ class FloatingButtonManager {
 
   private async rewordText() {
     const effectiveSettings = this.getEffectiveSettings()
-    // Get API key from settings or fallback to env file
     const apiKey = effectiveSettings.openRouterApiKey || env.OPEN_ROUTER_API
 
     if (!this.currentTarget || this.isProcessing || !apiKey) {
@@ -402,6 +432,33 @@ class FloatingButtonManager {
 
     this.currentButton.style.left = left
     this.currentButton.style.top = top
+  }
+
+  private setupResizeObserver() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+    }
+    this.resizeObserver = new ResizeObserver(() => {
+      this.repositionButton()
+    })
+    this.resizeObserver.observe(this.currentTarget as Element)
+  }
+
+  private setupInputListener() {
+    if (this.inputDebounceTimer) {
+      clearTimeout(this.inputDebounceTimer)
+    }
+    
+    const handleInput = () => {
+      if (this.inputDebounceTimer) {
+        clearTimeout(this.inputDebounceTimer)
+      }
+      this.inputDebounceTimer = setTimeout(() => {
+        this.repositionButton()
+      }, 500)
+    }
+    
+    this.currentTarget?.addEventListener('input', handleInput)
   }
 }
 

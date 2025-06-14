@@ -1,26 +1,16 @@
 /**
- * Environment variables module with type-safety and validation
+ * Environment variables module with type-safety
  *
  * This module handles loading environment variables from .env files through Vite
- * and provides type-safe access with validation.
+ * and provides type-safe access.
  */
 
 /**
  * Type definition for our environment variables
  */
 export interface Env {
-  OPEN_ROUTER_API: string
+  OPEN_ROUTER_API?: string
 }
-
-/**
- * Check if we're in development mode
- */
-export const isDev = getEnvVariables().DEV
-
-/**
- * Check if we're in production mode
- */
-export const isProd = getEnvVariables().PROD
 
 /**
  * Get environment variables with proper fallback handling
@@ -38,27 +28,19 @@ function getEnvVariables() {
 }
 
 /**
- * Validates that required environment variables are present
- * @throws Error if any required environment variables are missing
+ * Check if we're in development mode
  */
-function validateEnv(): Env {
-  const variables = getEnvVariables()
-  const openRouterApiKey = variables.VITE_OPEN_ROUTER_API
-
-  if (!openRouterApiKey && isDev) {
-    throw new Error(
-      'VITE_OPEN_ROUTER_API is required but not provided in .env file. ' +
-        'Please create a .env file with VITE_OPEN_ROUTER_API=your-api-key',
-    )
-  }
-
-  return {
-    OPEN_ROUTER_API: openRouterApiKey,
-  }
-}
+export const isDev = getEnvVariables().DEV
 
 /**
- * Exported environment variables with validation
- * This will throw an error during initialization if required vars are missing
+ * Check if we're in production mode
  */
-export const env: Env = validateEnv()
+export const isProd = getEnvVariables().PROD
+
+/**
+ * Exported environment variables
+ * Loads variables when available, no validation errors
+ */
+export const env: Env = {
+  OPEN_ROUTER_API: getEnvVariables().VITE_OPEN_ROUTER_API || undefined,
+}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import type { ButtonSettings } from '../shared/settings'
+  import { env, isDev } from '../shared/env'
 
   export let settings: ButtonSettings
 
@@ -10,11 +11,14 @@
   let isLoading = false
   let textareaElement: HTMLTextAreaElement
 
+  // Get effective API key from settings or environment
+  $: effectiveApiKey = settings.openRouterApiKey || env.OPEN_ROUTER_API
+
   const handleRewordClick = async () => {
     if (!previewText.trim() || isLoading) return
     
-    if (!settings.openRouterApiKey) {
-      alert('Please set your OpenRouter API key in the settings above to test the reword functionality.')
+    if (!effectiveApiKey) {
+      alert('Please set your OpenRouter API key in the settings above or in your .env file to test the reword functionality.')
       return
     }
 
@@ -24,7 +28,7 @@
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${settings.openRouterApiKey}`,
+          'Authorization': `Bearer ${effectiveApiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': chrome.runtime.getURL(''),
           'X-Title': 'Reword Extension'
@@ -111,7 +115,7 @@
   <div class="preview-note">
     <small>
       <strong>Note:</strong> The button appears at the bottom-right corner of the textarea. 
-      {#if !settings.openRouterApiKey}
+      {#if !settings.openRouterApiKey && !isDev}
         <span class="warning">⚠️ Set your OpenRouter API key above to test the reword functionality.</span>
       {/if}
     </small>
