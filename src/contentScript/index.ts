@@ -3,6 +3,14 @@ import OpenAI from 'openai'
 import { DEFAULT_SETTINGS, type ButtonSettings, loadSettings } from '../shared/settings'
 import { env } from '../shared/env'
 
+// Add debug logging (only in development)
+const DEBUG = import.meta.env.MODE === 'development'
+const log = (...args: any[]) => {
+  if (DEBUG) {
+    console.log('[Reword Extension]', ...args)
+  }
+}
+
 // Types for different input element configurations
 interface ElementConfig {
   type: 'input' | 'textarea' | 'akEditor' | 'contentEditable'
@@ -22,31 +30,68 @@ class FloatingButtonManager {
   private inputDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
+    log('FloatingButtonManager initializing...')
     this.loadSettings()
     this.loadDomainOverrides()
-    this.init()
+    
+    // Wait for DOM to be ready before initializing
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        log('DOM loaded, initializing...')
+        this.init()
+      })
+    } else {
+      log('DOM already loaded, initializing immediately...')
+      this.init()
+    }
   }
 
   private async loadSettings() {
-    this.settings = await loadSettings()
+    try {
+      this.settings = await loadSettings()
+      log('Settings loaded:', this.settings)
+    } catch (error) {
+      log('Error loading settings:', error)
+      this.settings = DEFAULT_SETTINGS
+    }
   }
 
   private async loadDomainOverrides() {
     try {
       const result = await chrome.storage.sync.get(['rewordDomainOverrides'])
       this.domainOverrides = result.rewordDomainOverrides || {}
+      log('Domain overrides loaded:', this.domainOverrides)
     } catch (error) {
       console.warn('Failed to load domain overrides:', error)
     }
   }
 
   private getEffectiveSettings(): ButtonSettings {
+    const currentUrl = window.location.href
     const hostname = window.location.hostname
-    const overrides = this.domainOverrides[hostname] || {}
-    return { ...this.settings, ...overrides }
+    
+    // Check for URL pattern matches first
+    for (const [pattern, settings] of Object.entries(this.domainOverrides)) {
+      if (pattern.includes('/')) {
+        // This is a URL pattern, check if current URL matches
+        const [domain, path] = pattern.split('/', 2)
+        if (hostname.includes(domain) && currentUrl.includes('/' + path)) {
+          return { ...this.settings, ...settings }
+        }
+      } else {
+        // This is a hostname pattern, use original logic
+        if (hostname === pattern || hostname.endsWith('.' + pattern)) {
+          return { ...this.settings, ...settings }
+        }
+      }
+    }
+    
+    return this.settings
   }
 
   private init() {
+    log('Initializing event listeners on:', window.location.href)
+    
     // Listen for focus events on input and textarea elements
     document.addEventListener('focusin', this.handleFocusIn.bind(this), true)
     document.addEventListener('focusout', this.handleFocusOut.bind(this), true)
@@ -61,6 +106,7 @@ class FloatingButtonManager {
 
     // Listen for settings updates from options page
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      log('Received message:', request.type)
       if (request.type === 'SETTINGS_UPDATED') {
         this.settings = { ...this.settings, ...request.settings }
         this.updateButtonAppearance()
@@ -71,6 +117,8 @@ class FloatingButtonManager {
         sendResponse({ success: true })
       }
     })
+
+    log('Event listeners initialized successfully')
   }
 
   private handleMouseOver(event: MouseEvent) {
@@ -100,12 +148,16 @@ class FloatingButtonManager {
   }
 
   private handleFocusIn(event: FocusEvent) {
+    log('Focus in event triggered on:', event.target)
     const target = event.target as HTMLElement
     const config = this.detectInputElement(target)
 
+    log('Detected element config:', config)
     if (config) {
       const effectiveSettings = this.getEffectiveSettings()
+      log('Effective settings:', effectiveSettings)
       if (!effectiveSettings.showOnHover) {
+        log('Showing button for element:', target.tagName, target.className)
         this.showButton(config)
       }
     }
@@ -172,6 +224,8 @@ class FloatingButtonManager {
   }
 
   private showButton(config: ElementConfig) {
+    log('showButton called for:', config.type, config.element)
+    
     // Remove existing button if any
     this.hideButton()
 
@@ -183,34 +237,48 @@ class FloatingButtonManager {
     buttonContainer.id = 'reword-floating-button'
     buttonContainer.style.cssText = `
       position: absolute;
-      z-index: 10000;
+      z-index: 999999 !important;
       pointer-events: auto;
+      background: transparent;
     `
 
     const effectiveSettings = this.getEffectiveSettings()
 
-    // Mount Svelte component
-    this.svelteComponent = new FloatingButton({
-      target: buttonContainer,
-      props: {
-        onClick: () => {
-          this.rewordText()
+    try {
+      // Mount Svelte component
+      this.svelteComponent = new FloatingButton({
+        target: buttonContainer,
+        props: {
+          onClick: () => {
+            log('Button clicked!')
+            // Ensure we maintain focus on the original text area
+            if (this.currentTarget) {
+              this.currentTarget.focus()
+            }
+            this.rewordText()
+          },
+          size: effectiveSettings.buttonSize,
+          state: 'default',
         },
-        size: effectiveSettings.buttonSize,
-        state: 'default',
-      },
-    })
+      })
 
-    document.body.appendChild(buttonContainer)
-    this.currentButton = buttonContainer
+      document.body.appendChild(buttonContainer)
+      this.currentButton = buttonContainer
 
-    // Set up ResizeObserver to monitor element dimension changes
-    this.setupResizeObserver()
-    
-    // Set up input event listener for debounced repositioning
-    this.setupInputListener()
+      log('Button created and appended to DOM')
 
-    this.repositionButton()
+      // Set up ResizeObserver to monitor element dimension changes
+      this.setupResizeObserver()
+      
+      // Set up input event listener for debounced repositioning
+      this.setupInputListener()
+
+      this.repositionButton()
+      
+      log('Button positioned at:', buttonContainer.style.left, buttonContainer.style.top)
+    } catch (error) {
+      log('Error creating button:', error)
+    }
   }
 
   private hideButton() {
@@ -338,11 +406,14 @@ class FloatingButtonManager {
         if (selection && selection.rangeCount > 0) {
           const selectedText = selection.toString()
           if (selectedText.trim()) {
+            log('Using selected text:', selectedText)
             return selectedText
           }
         }
         // If no text is selected, get all text content
-        return this.currentTarget.textContent || ''
+        const allText = this.currentTarget.textContent || ''
+        log('No selection, using all text:', allText)
+        return allText
       }
 
       default:
@@ -419,12 +490,18 @@ class FloatingButtonManager {
   }
 
   private repositionButton() {
-    if (!this.currentButton || !this.currentTarget || !this.currentConfig) return
+    if (!this.currentButton || !this.currentTarget || !this.currentConfig) {
+      log('Cannot reposition: missing button, target, or config')
+      return
+    }
 
     const rect = this.currentTarget.getBoundingClientRect()
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft
     const scrollY = window.pageYOffset || document.documentElement.scrollTop
     const effectiveSettings = this.getEffectiveSettings()
+
+    log('Repositioning button - target rect:', rect)
+    log('Scroll position:', { scrollX, scrollY })
 
     // Always position at bottom-right corner of the element
     const left = `${rect.right + scrollX + effectiveSettings.offsetX}px`
@@ -432,6 +509,8 @@ class FloatingButtonManager {
 
     this.currentButton.style.left = left
     this.currentButton.style.top = top
+    
+    log('Button repositioned to:', { left, top })
   }
 
   private setupResizeObserver() {

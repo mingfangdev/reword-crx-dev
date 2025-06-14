@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../app.css'
   import { onMount } from 'svelte'
   import { 
     DEFAULT_SETTINGS, 
@@ -17,7 +18,7 @@
   // Use centralized default settings
   let settings: ButtonSettings = { ...DEFAULT_SETTINGS }
   let domainOverrides: Record<string, Partial<ButtonSettings>> = {}
-  let newDomain = ''
+  let newPattern = ''
   let newOverrideSettings: Partial<ButtonSettings> = {
     offsetX: 16,
     offsetY: 4,
@@ -26,19 +27,14 @@
 
   let saved = false
 
-  // Common domain presets with both position and prompt overrides
-  const commonDomainPresets = [
+  // Edit state for pattern overrides
+  let editingPattern: string | null = null
+  let editSettings: Partial<ButtonSettings> = {}
+
+  // Common pattern presets with both position and prompt overrides
+  const commonPatternPresets = [
     { 
-      domain: 'atlassian.net', 
-      name: 'Atlassian Cloud (Jira/Confluence)', 
-      settings: { 
-        offsetX: -8, 
-        offsetY: 8,
-        rewordPrompt: 'Rephrase the provided text into a formal comment suitable for Jira/Confluence. Use professional tone and clear structure.'
-      } 
-    },
-    { 
-      domain: 'jira.com', 
+      pattern: 'atlassian.net/jira', 
       name: 'Jira', 
       settings: { 
         offsetX: -8, 
@@ -46,15 +42,6 @@
         rewordPrompt: 'Rephrase the provided text into a formal Jira comment. Be concise, professional, and action-oriented.'
       } 
     },
-    { 
-      domain: 'confluence.com', 
-      name: 'Confluence', 
-      settings: { 
-        offsetX: -8, 
-        offsetY: 8,
-        rewordPrompt: 'Rephrase the provided text for Confluence documentation. Use clear, informative language suitable for team collaboration.'
-      } 
-    }
   ]
 
   onMount(async () => {
@@ -89,11 +76,11 @@
     }
   }
 
-  const addDomainOverride = () => {
-    if (newDomain.trim()) {
-      domainOverrides[newDomain.trim()] = { ...newOverrideSettings }
+  const addPatternOverride = () => {
+    if (newPattern.trim()) {
+      domainOverrides[newPattern.trim()] = { ...newOverrideSettings }
       domainOverrides = domainOverrides // Trigger reactivity
-      newDomain = ''
+      newPattern = ''
       newOverrideSettings = {
         offsetX: 16,
         offsetY: 4,
@@ -103,16 +90,36 @@
     }
   }
 
-  const addPresetDomain = (preset: typeof commonDomainPresets[0]) => {
-    domainOverrides[preset.domain] = { ...preset.settings }
+  const addPresetPattern = (preset: typeof commonPatternPresets[0]) => {
+    domainOverrides[preset.pattern] = { ...preset.settings }
     domainOverrides = domainOverrides // Trigger reactivity
     saveDomainOverridesData()
   }
 
-  const removeDomainOverride = (domain: string) => {
-    delete domainOverrides[domain]
+  const removePatternOverride = (pattern: string) => {
+    delete domainOverrides[pattern]
     domainOverrides = domainOverrides // Trigger reactivity
     saveDomainOverridesData()
+  }
+
+  const startEditPatternOverride = (pattern: string) => {
+    editingPattern = pattern
+    editSettings = { ...domainOverrides[pattern] }
+  }
+
+  const saveEditPatternOverride = () => {
+    if (editingPattern) {
+      domainOverrides[editingPattern] = { ...editSettings }
+      domainOverrides = domainOverrides // Trigger reactivity
+      editingPattern = null
+      editSettings = {}
+      saveDomainOverridesData()
+    }
+  }
+
+  const cancelEditPatternOverride = () => {
+    editingPattern = null
+    editSettings = {}
   }
 
   const resetSettings = () => {
@@ -126,648 +133,337 @@
   }
 </script>
 
-<main>
-  <h1>Reword Extension Settings</h1>
+<main class="min-h-screen bg-gray-50 dark:bg-gray-900 p-5">
+  <div class="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg">
+    <h1 class="text-3xl font-semibold text-center mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+      Reword Extension Settings
+    </h1>
 
-  <div class="settings-section">
-    <h3>Button Appearance</h3>
-    <p class="section-description">
-      Configure the button's visual appearance and position. The button appears at the bottom-right corner of input elements.
-    </p>
+    <div class="space-y-8">
+      <!-- Button Appearance Section -->
+      <div class="pb-6 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-4">Button Appearance</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+          Configure the button's visual appearance and position. The button appears at the bottom-right corner of input elements.
+        </p>
 
-    <div class="setting-group">
-      <label>
-        Button size (px):
-        <input type="number" bind:value={settings.buttonSize} min={SETTINGS_CONSTRAINTS.buttonSize.min} max={SETTINGS_CONSTRAINTS.buttonSize.max} />
-      </label>
-    </div>
-
-    <div class="setting-group">
-      <label>
-        Horizontal offset (px):
-        <input type="number" bind:value={settings.offsetX} min={SETTINGS_CONSTRAINTS.offsetX.min} max={SETTINGS_CONSTRAINTS.offsetX.max} />
-        <small>Positive values move the button right, negative values move it left</small>
-      </label>
-    </div>
-
-    <div class="setting-group">
-      <label>
-        Vertical offset (px):
-        <input type="number" bind:value={settings.offsetY} min={SETTINGS_CONSTRAINTS.offsetY.min} max={SETTINGS_CONSTRAINTS.offsetY.max} />
-        <small>Positive values move the button down, negative values move it up</small>
-      </label>
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <h3>Behavior</h3>
-    <div class="setting-group">
-      <label>
-        <input type="checkbox" bind:checked={settings.showOnHover} />
-        Show button only on hover over input
-      </label>
-    </div>
-
-    <div class="setting-group">
-      <label>
-        <input type="checkbox" bind:checked={settings.autoHide} />
-        Auto-hide when focus is lost
-      </label>
-    </div>
-
-
-  </div>
-
-  <div class="settings-section">
-    <h3>Domain-Specific Overrides</h3>
-    <p class="section-description">
-      Configure custom button positions and prompts for specific websites. Each domain can have its own button positioning and AI prompt settings.
-    </p>
-    
-    <!-- Common domain presets -->
-    <div class="preset-domains">
-      <h4>Quick Add Common Domains</h4>
-      <div class="preset-buttons">
-        {#each commonDomainPresets as preset}
-          <button 
-            class="preset-btn" 
-            on:click={() => addPresetDomain(preset)}
-            disabled={Object.keys(domainOverrides).some(domain => domain.includes(preset.domain))}
-          >
-            + {preset.name}
-          </button>
-        {/each}
-      </div>
-    </div>
-
-    <!-- Add new domain override -->
-    <div class="domain-override-form">
-      <h4>Custom Domain Override</h4>
-      <div class="form-column">
-        <div class="form-row">
-          <label>
-            Domain:
-            <input 
-              type="text" 
-              bind:value={newDomain} 
-              placeholder="example.com" 
-              class="domain-input"
-            />
-          </label>
-          <label>
-            X Offset:
-            <input 
-              type="number" 
-              bind:value={newOverrideSettings.offsetX} 
-              placeholder="16"
-              min={SETTINGS_CONSTRAINTS.offsetX.min} 
-              max={SETTINGS_CONSTRAINTS.offsetX.max}
-              class="offset-input"
-            />
-          </label>
-          <label>
-            Y Offset:
-            <input 
-              type="number" 
-              bind:value={newOverrideSettings.offsetY} 
-              placeholder="4"
-              min={SETTINGS_CONSTRAINTS.offsetY.min} 
-              max={SETTINGS_CONSTRAINTS.offsetY.max}
-              class="offset-input"
-            />
-          </label>
-        </div>
-        <div class="form-textarea-row">
-          <label>
-            Custom Prompt (Optional):
-            <textarea 
-              bind:value={newOverrideSettings.rewordPrompt} 
-              placeholder="Enter custom prompt for this domain..." 
-              class="prompt-textarea"
-              rows="3"
-            ></textarea>
-          </label>
-        </div>
-        <button class="add-btn" on:click={addDomainOverride}>Add Custom Override</button>
-      </div>
-    </div>
-
-    <!-- List existing domain overrides -->
-    {#if Object.keys(domainOverrides).length > 0}
-      <div class="domain-overrides-list">
-        {#each Object.entries(domainOverrides) as [domain, override]}
-          <div class="domain-override-item">
-            <div class="override-header">
-              <span class="domain-name">{domain}</span>
-              <button class="remove-btn" on:click={() => removeDomainOverride(domain)}>×</button>
-            </div>
-            <div class="override-details">
-              <div class="override-position">
-                Position: ({override.offsetX || 16}, {override.offsetY || 4})
-              </div>
-              {#if override.rewordPrompt}
-                <div class="override-prompt">
-                  <strong>Custom Prompt:</strong> {override.rewordPrompt.substring(0, 100)}{override.rewordPrompt.length > 100 ? '...' : ''}
-                </div>
-              {:else}
-                <div class="override-prompt-default">
-                  Using default prompt
-                </div>
-              {/if}
-            </div>
+        <div class="space-y-4">
+          <div class="flex flex-col">
+            <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Button size (px):
+              <input 
+                type="number" 
+                bind:value={settings.buttonSize} 
+                min={SETTINGS_CONSTRAINTS.buttonSize.min} 
+                max={SETTINGS_CONSTRAINTS.buttonSize.max} 
+                class="w-32 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </label>
           </div>
-        {/each}
+
+          <div class="flex flex-col">
+            <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Horizontal offset (px):
+              <input 
+                type="number" 
+                bind:value={settings.offsetX} 
+                min={SETTINGS_CONSTRAINTS.offsetX.min} 
+                max={SETTINGS_CONSTRAINTS.offsetX.max} 
+                class="w-32 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <small class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Positive values move the button right, negative values move it left
+              </small>
+            </label>
+          </div>
+
+          <div class="flex flex-col">
+            <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Vertical offset (px):
+              <input 
+                type="number" 
+                bind:value={settings.offsetY} 
+                min={SETTINGS_CONSTRAINTS.offsetY.min} 
+                max={SETTINGS_CONSTRAINTS.offsetY.max} 
+                class="w-32 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <small class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Positive values move the button down, negative values move it up
+              </small>
+            </label>
+          </div>
+        </div>
       </div>
-      <button class="secondary small" on:click={resetDomainOverrides}>
-        Clear All Domain Overrides
+
+      <!-- Behavior Section -->
+      <div class="pb-6 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-4">Behavior</h3>
+        <div class="space-y-3">
+          <label class="flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input 
+              type="checkbox" 
+              bind:checked={settings.showOnHover} 
+              class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            Show button only on hover over input
+          </label>
+
+          <label class="flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input 
+              type="checkbox" 
+              bind:checked={settings.autoHide} 
+              class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            Auto-hide when focus is lost
+          </label>
+        </div>
+      </div>
+
+      <!-- Domain-Specific Overrides Section -->
+      <div class="pb-6 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-4">URL Pattern Overrides</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+          Configure custom button positions and prompts for specific websites. Use domain patterns (e.g., 'example.com') or URL patterns (e.g., 'atlassian.net/jira') for more precise matching.
+        </p>
+        
+        <!-- Common domain presets -->
+        <div class="mb-6">
+          <h4 class="text-base font-medium text-gray-900 dark:text-white mb-3">Quick Add Common Patterns</h4>
+          <div class="flex flex-wrap gap-2">
+            {#each commonPatternPresets as preset}
+              <button 
+                class="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded-md transition-colors duration-200"
+                on:click={() => addPresetPattern(preset)}
+                disabled={Object.keys(domainOverrides).some(pattern => pattern === preset.pattern || pattern.endsWith('.' + preset.pattern))}
+              >
+                + {preset.name}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Add new domain override -->
+        <div class="mb-5">
+          <h4 class="text-base font-medium text-gray-900 dark:text-white mb-3">Custom URL Pattern Override</h4>
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                URL Pattern:
+                <input 
+                  type="text" 
+                  bind:value={newPattern} 
+                  placeholder="atlassian.net/jira" 
+                  class="px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </label>
+              <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                X Offset:
+                <input 
+                  type="number" 
+                  bind:value={newOverrideSettings.offsetX} 
+                  placeholder="16"
+                  min={SETTINGS_CONSTRAINTS.offsetX.min} 
+                  max={SETTINGS_CONSTRAINTS.offsetX.max}
+                  class="px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </label>
+              <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Y Offset:
+                <input 
+                  type="number" 
+                  bind:value={newOverrideSettings.offsetY} 
+                  placeholder="4"
+                  min={SETTINGS_CONSTRAINTS.offsetY.min} 
+                  max={SETTINGS_CONSTRAINTS.offsetY.max}
+                  class="px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </label>
+            </div>
+            <div class="flex flex-col">
+              <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Custom Prompt (Optional):
+                <textarea 
+                  bind:value={newOverrideSettings.rewordPrompt} 
+                  placeholder="Enter custom prompt for this domain..." 
+                  rows="3"
+                  class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-vertical min-h-[80px]"
+                ></textarea>
+              </label>
+            </div>
+            <button 
+              class="self-start px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-all duration-200 hover:transform hover:-translate-y-0.5 hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              on:click={addPatternOverride}
+            >
+              Add Custom Pattern
+            </button>
+          </div>
+        </div>
+
+        <!-- List existing domain overrides -->
+        {#if Object.keys(domainOverrides).length > 0}
+          <div class="mb-4 space-y-3">
+            {#each Object.entries(domainOverrides) as [pattern, override]}
+              <div class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                {#if editingPattern === pattern}
+                  <!-- Edit mode -->
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="font-semibold text-gray-900 dark:text-white text-base">Editing: {pattern}</span>
+                      <div class="flex gap-2">
+                        <button 
+                          class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded-md"
+                          on:click={saveEditPatternOverride}
+                        >
+                          Save
+                        </button>
+                        <button 
+                          class="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded-md"
+                          on:click={cancelEditPatternOverride}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        X Offset:
+                        <input 
+                          type="number" 
+                          bind:value={editSettings.offsetX} 
+                          min={SETTINGS_CONSTRAINTS.offsetX.min} 
+                          max={SETTINGS_CONSTRAINTS.offsetX.max}
+                          class="w-32 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </label>
+                      <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Y Offset:
+                        <input 
+                          type="number" 
+                          bind:value={editSettings.offsetY} 
+                          min={SETTINGS_CONSTRAINTS.offsetY.min} 
+                          max={SETTINGS_CONSTRAINTS.offsetY.max}
+                          class="w-32 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </label>
+                    </div>
+                    <div class="flex flex-col">
+                      <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Custom Prompt (Optional):
+                        <textarea 
+                          bind:value={editSettings.rewordPrompt} 
+                          placeholder="Enter custom prompt for this domain..." 
+                          rows="3"
+                          class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-vertical min-h-[80px]"
+                        ></textarea>
+                      </label>
+                    </div>
+                  </div>
+                {:else}
+                  <!-- View mode -->
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-semibold text-gray-900 dark:text-white text-base">{pattern}</span>
+                    <div class="flex gap-2">
+                      <button 
+                        class="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs leading-none"
+                        on:click={() => startEditPatternOverride(pattern)}
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
+                      <button 
+                        class="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-base leading-none"
+                        on:click={() => removePatternOverride(pattern)}
+                        title="Delete"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                      Position: ({override.offsetX || 16}, {override.offsetY || 4})
+                    </div>
+                    {#if override.rewordPrompt}
+                      <div class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        <strong>Custom Prompt:</strong> {override.rewordPrompt.substring(0, 100)}{override.rewordPrompt.length > 100 ? '...' : ''}
+                      </div>
+                    {:else}
+                      <div class="text-xs text-gray-400 dark:text-gray-500 italic">
+                        Using default prompt
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+          <button 
+            class="px-4 py-2 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 rounded-md transition-colors duration-200"
+            on:click={resetDomainOverrides}
+          >
+            Clear All Pattern Overrides
+          </button>
+        {:else}
+          <p class="text-center py-5 text-sm text-gray-500 dark:text-gray-400 italic">
+            No URL pattern overrides configured.
+          </p>
+        {/if}
+      </div>
+
+      <!-- AI Integration Section -->
+      <div class="pb-6">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-4">AI Integration</h3>
+        <div class="space-y-4">
+          <div class="flex flex-col">
+            <label class="flex flex-col gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              OpenRouter API Key:
+              <input 
+                type="password" 
+                bind:value={settings.openRouterApiKey} 
+                placeholder="sk-or-..." 
+                class="max-w-sm px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <small class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Get your API key from <a href="https://openrouter.ai/keys" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">openrouter.ai/keys</a>
+              </small>
+            </label>
+          </div>
+
+          <div class="flex flex-col">
+            <label for="reword-prompt" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Default Prompt:
+            </label>
+            <textarea 
+              id="reword-prompt"
+              bind:value={settings.rewordPrompt} 
+              rows="3" 
+              placeholder="Enter your custom prompt for rephrasing text..."
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-vertical min-h-[80px]"
+            ></textarea>
+            <small class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              This prompt will be used to instruct the AI how to rephrase your text
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3 mt-8 mb-8">
+      <button 
+        class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium rounded-md transition-all duration-200 hover:transform hover:-translate-y-0.5 hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        on:click={saveSettings}
+      >
+        {saved ? '✓ Saved!' : 'Save Settings'}
       </button>
-    {:else}
-      <p class="no-overrides">No domain-specific overrides configured.</p>
-    {/if}
-  </div>
-
-  <div class="settings-section">
-    <h3>AI Integration</h3>
-    <div class="setting-group">
-      <label>
-        OpenRouter API Key:
-        <input type="password" bind:value={settings.openRouterApiKey} placeholder="sk-or-..." />
-        <small>Get your API key from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></small>
-      </label>
+      <button 
+        class="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 font-medium rounded-md transition-colors duration-200"
+        on:click={resetSettings}
+      >
+        Reset to Defaults
+      </button>
     </div>
 
-    <div class="setting-group textarea-group">
-      <label for="reword-prompt">Reword Prompt:</label>
-      <textarea 
-        id="reword-prompt"
-        bind:value={settings.rewordPrompt} 
-        rows="3" 
-        placeholder="Enter your custom prompt for rephrasing text..."
-      ></textarea>
-      <small>This prompt will be used to instruct the AI how to rephrase your text</small>
-    </div>
+    <Preview {settings} />
   </div>
-
-  <div class="actions">
-    <button class="primary" on:click={saveSettings}>
-      {saved ? '✓ Saved!' : 'Save Settings'}
-    </button>
-    <button class="secondary" on:click={resetSettings}>
-      Reset to Defaults
-    </button>
-  </div>
-
-  <Preview {settings} />
 </main>
-
-<style>
-  :global(:root) {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color-scheme: light dark;
-  }
-
-  :global(body) {
-    margin: 0;
-    padding: 20px;
-    background: #f5f5f5;
-    min-height: 100vh;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(body) {
-      background: #1a1a1a;
-      color: #ffffff;
-    }
-  }
-
-  main {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 12px;
-    padding: 32px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    main {
-      background: #2a2a2a;
-    }
-  }
-
-  h1 {
-    color: #667eea;
-    text-align: center;
-    margin-bottom: 32px;
-    font-weight: 600;
-    font-size: 28px;
-  }
-
-  h3 {
-    color: #333;
-    margin-bottom: 16px;
-    font-weight: 500;
-    font-size: 20px;
-  }
-
-  h4 {
-    color: #333;
-    margin-bottom: 12px;
-    font-weight: 500;
-    font-size: 16px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    h3, h4 {
-      color: #ffffff;
-    }
-  }
-
-  .settings-section {
-    margin-bottom: 32px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid #eee;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .settings-section {
-      border-bottom-color: #444;
-    }
-  }
-
-  .setting-group {
-    margin-bottom: 16px;
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-weight: 500;
-    font-size: 14px;
-    color: #555;
-  }
-
-  .textarea-group {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .textarea-group label {
-    align-self: flex-start;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    label {
-      color: #ccc;
-    }
-  }
-
-  input, textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    box-sizing: border-box;
-  }
-
-  textarea {
-    max-width: 100%;
-    resize: vertical;
-    min-height: 80px;
-  }
-
-  input[type="password"] {
-    max-width: 350px;
-  }
-
-  input[type="number"] {
-    max-width: 120px;
-  }
-
-  small {
-    display: block;
-    font-size: 12px;
-    color: #666;
-    margin-top: 4px;
-  }
-
-  small a {
-    color: #667eea;
-    text-decoration: none;
-  }
-
-  small a:hover {
-    text-decoration: underline;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    input, textarea {
-      background: #333;
-      border-color: #555;
-      color: #fff;
-    }
-
-    small {
-      color: #aaa;
-    }
-  }
-
-  input[type="checkbox"] {
-    width: auto;
-    margin-right: 8px;
-    margin-top: 0;
-  }
-
-  .actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 32px;
-  }
-
-  button {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-  }
-
-  .primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  }
-
-  .secondary {
-    background: #f0f0f0;
-    color: #666;
-  }
-
-  .secondary:hover {
-    background: #e0e0e0;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .secondary {
-      background: #444;
-      color: #ccc;
-    }
-    .secondary:hover {
-      background: #555;
-    }
-  }
-
-  .section-description {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 16px;
-    line-height: 1.4;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .section-description {
-      color: #aaa;
-    }
-  }
-
-  .preset-domains {
-    margin-bottom: 24px;
-  }
-
-  .preset-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .preset-btn {
-    padding: 8px 16px;
-    background: #f8f9fa;
-    color: #495057;
-    border: 2px solid #dee2e6;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s ease;
-  }
-
-  .preset-btn:hover:not(:disabled) {
-    background: #e9ecef;
-    border-color: #adb5bd;
-  }
-
-  .preset-btn:disabled {
-    background: #e9ecef;
-    color: #6c757d;
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .preset-btn {
-      background: #495057;
-      color: #fff;
-      border-color: #6c757d;
-    }
-
-    .preset-btn:hover:not(:disabled) {
-      background: #5a6268;
-      border-color: #868e96;
-    }
-
-    .preset-btn:disabled {
-      background: #343a40;
-      color: #868e96;
-    }
-  }
-
-  .domain-override-form {
-    margin-bottom: 20px;
-  }
-
-  .form-column {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 100px 100px;
-    gap: 12px;
-    align-items: end;
-  }
-
-  .form-textarea-row {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 12px;
-  }
-
-  .domain-input {
-    width: 100%;
-  }
-
-  .offset-input {
-    width: 100%;
-  }
-
-  .prompt-textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    resize: vertical;
-    box-sizing: border-box;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .prompt-textarea {
-      background: #333;
-      border-color: #555;
-      color: #fff;
-    }
-  }
-
-  .add-btn {
-    padding: 12px 24px;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    align-self: flex-start;
-  }
-
-  .add-btn:hover {
-    background: #5a6fd8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  .domain-overrides-list {
-    margin-bottom: 16px;
-  }
-
-  .domain-override-item {
-    padding: 16px;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    margin-bottom: 12px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .domain-override-item {
-      background: #3a3a3a;
-      border-color: #555;
-    }
-  }
-
-  .override-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-
-  .domain-name {
-    font-weight: 600;
-    color: #333;
-    font-size: 16px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .domain-name {
-      color: #fff;
-    }
-  }
-
-  .override-details {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .override-position {
-    font-size: 14px;
-    color: #666;
-  }
-
-  .override-prompt {
-    font-size: 13px;
-    color: #555;
-    line-height: 1.4;
-  }
-
-  .override-prompt-default {
-    font-size: 13px;
-    color: #999;
-    font-style: italic;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .override-position {
-      color: #ccc;
-    }
-
-    .override-prompt {
-      color: #bbb;
-    }
-
-    .override-prompt-default {
-      color: #777;
-    }
-  }
-
-  .remove-btn {
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    line-height: 1;
-  }
-
-  .remove-btn:hover {
-    background: #c82333;
-  }
-
-  .small {
-    font-size: 12px;
-    padding: 8px 16px;
-  }
-
-  .no-overrides {
-    font-style: italic;
-    color: #999;
-    text-align: center;
-    padding: 20px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .no-overrides {
-      color: #666;
-    }
-  }
-</style>

@@ -3,10 +3,27 @@
   export let size: number = 32
   export let state: 'default' | 'processing' | 'success' | 'error' = 'default'
 
-  const handleClick = () => {
+  const DEBUG = import.meta.env.MODE === 'development'
+  
+  const handleClick = (event: MouseEvent) => {
+    if (DEBUG) console.log('[Reword Extension] Button handleClick called')
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
+    
     if (state !== 'processing') {
+      if (DEBUG) console.log('[Reword Extension] Calling onClick handler')
       onClick()
+    } else {
+      if (DEBUG) console.log('[Reword Extension] Button is processing, ignoring click')
     }
+  }
+
+  const handleMouseDown = (event: MouseEvent) => {
+    if (DEBUG) console.log('[Reword Extension] Button mousedown called')
+    event.preventDefault()
+    event.stopPropagation()
+    event.stopImmediatePropagation()
   }
 
   $: icon = state === 'processing' ? '⏳' : 
@@ -22,9 +39,11 @@
 <button 
   class="floating-button {state}" 
   on:click={handleClick}
+  on:mousedown={handleMouseDown}
   title={title}
   style="width: {size}px; height: {size}px; font-size: {size * 0.4375}px"
   disabled={state === 'processing'}
+  tabindex="-1"
 >
   {icon}
 </button>
@@ -42,6 +61,9 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
     font-family: system-ui, -apple-system, sans-serif;
+    position: relative;
+    z-index: 999999;
+    pointer-events: auto;
   }
 
   .floating-button:hover {
