@@ -46,7 +46,7 @@
           {required}
           {min}
           {max}
-          class="{baseInputClasses} w-40 {$$props.class || ''}"
+          class="{baseInputClasses} w-full {$$props.class || ''}"
           on:input
           on:change
           on:focus

@@ -24,7 +24,9 @@ Your codebase is a Chrome extension built with modern web technologies that prov
 ```
 src/
 ├── contentScript/       # Core functionality (546 lines)
-│   ├── FloatingButton.svelte    # UI component
+│   ├── EditButton.svelte    # UI component for text editing
+│   ├── JiraButton.svelte    # UI component for Jira actions
+│   ├── JiraModal.svelte     # Modal component for Jira functionality
 │   └── index.ts                 # Main logic
 ├── options/            # Settings interface
 │   ├── Options.svelte          # Main settings UI

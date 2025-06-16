@@ -1,4 +1,6 @@
-import FloatingButton from './FloatingButton.svelte'
+import EditButton from './EditButton.svelte'
+import JiraButton from './JiraButton.svelte'
+import JiraModal from './JiraModal.svelte'
 import OpenAI from 'openai'
 import { DEFAULT_SETTINGS, type ButtonSettings, loadSettings } from '../shared/settings'
 import { env } from '../shared/env'
@@ -18,7 +20,7 @@ interface ElementConfig {
   selector?: string
 }
 
-class FloatingButtonManager {
+class EditButtonManager {
   private currentButton: HTMLElement | null = null
   private currentTarget: HTMLElement | null = null
   private currentConfig: ElementConfig | null = null
@@ -30,7 +32,7 @@ class FloatingButtonManager {
   private inputDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
-    log('FloatingButtonManager initializing...')
+    log('EditButtonManager initializing...')
     this.loadSettings()
     this.loadDomainOverrides()
     
@@ -210,9 +212,18 @@ class FloatingButtonManager {
       }
     }
 
-    // Check for standard input and textarea
+    // Check for standard input and textarea - only text-based input types
     if (element.tagName === 'INPUT') {
-      return { type: 'input', element }
+      const inputElement = element as HTMLInputElement
+      const textBasedTypes = ['text']
+      const inputType = inputElement.type.toLowerCase() || 'text'
+      
+      if (textBasedTypes.includes(inputType)) {
+        return { type: 'input', element }
+      }
+      
+      // Skip non-text input types like button, checkbox, radio, submit, etc.
+      return null
     }
 
     if (element.tagName === 'TEXTAREA') {
@@ -255,7 +266,7 @@ class FloatingButtonManager {
 
     try {
       // Mount Svelte component
-      this.svelteComponent = new FloatingButton({
+      this.svelteComponent = new EditButton({
         target: buttonContainer,
         props: {
           onClick: () => {
@@ -564,5 +575,126 @@ class FloatingButtonManager {
   }
 }
 
-// Initialize the floating button manager
-new FloatingButtonManager()
+class JiraButtonManager {
+  private jiraButton: HTMLElement | null = null
+  private jiraModal: HTMLElement | null = null
+  private jiraSvelteComponent: any = null
+  private modalSvelteComponent: any = null
+  private isModalOpen: boolean = false
+
+  constructor() {
+    log('JiraButtonManager initializing...')
+    this.init()
+  }
+
+  private init() {
+    log('Initializing Jira button...')
+    this.createJiraButton()
+  }
+
+  private createJiraButton() {
+    // Create Jira button container
+    const buttonContainer = document.createElement('div')
+    buttonContainer.id = 'reword-jira-button'
+    buttonContainer.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999999 !important;
+      pointer-events: auto;
+      background: transparent;
+    `
+
+    try {
+      // Mount Jira Svelte component
+      this.jiraSvelteComponent = new JiraButton({
+        target: buttonContainer,
+        props: {
+          onClick: () => {
+            log('Jira Button clicked!')
+            this.toggleModal()
+          },
+          size: 40,
+          state: 'default',
+        },
+      })
+
+      document.body.appendChild(buttonContainer)
+      this.jiraButton = buttonContainer
+
+      log('Jira button created and positioned')
+    } catch (error) {
+      log('Error creating Jira button:', error)
+    }
+  }
+
+  private toggleModal() {
+    if (this.isModalOpen) {
+      this.closeModal()
+    } else {
+      this.openModal()
+    }
+  }
+
+  private openModal() {
+    if (this.isModalOpen) return
+
+    // Create modal container
+    const modalContainer = document.createElement('div')
+    modalContainer.id = 'reword-jira-modal'
+
+    try {
+      // Mount modal Svelte component
+      this.modalSvelteComponent = new JiraModal({
+        target: modalContainer,
+        props: {
+          isOpen: true,
+          onClose: () => {
+            this.closeModal()
+          }
+        },
+      })
+
+      document.body.appendChild(modalContainer)
+      this.jiraModal = modalContainer
+      this.isModalOpen = true
+
+      log('Jira modal opened')
+    } catch (error) {
+      log('Error creating Jira modal:', error)
+    }
+  }
+
+  private closeModal() {
+    if (!this.isModalOpen || !this.jiraModal) return
+
+    // Destroy modal Svelte component
+    if (this.modalSvelteComponent) {
+      this.modalSvelteComponent.$destroy()
+      this.modalSvelteComponent = null
+    }
+
+    this.jiraModal.remove()
+    this.jiraModal = null
+    this.isModalOpen = false
+
+    log('Jira modal closed')
+  }
+
+  destroy() {
+    this.closeModal()
+    
+    if (this.jiraButton) {
+      if (this.jiraSvelteComponent) {
+        this.jiraSvelteComponent.$destroy()
+        this.jiraSvelteComponent = null
+      }
+      this.jiraButton.remove()
+      this.jiraButton = null
+    }
+  }
+}
+
+// Initialize the managers
+new EditButtonManager()
+new JiraButtonManager()

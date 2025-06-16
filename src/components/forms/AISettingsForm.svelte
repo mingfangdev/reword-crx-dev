@@ -5,7 +5,7 @@
   export let settings: ButtonSettings
 </script>
 
-<div class="max-w-4xl mx-auto space-y-6">
+<div class="space-y-6">
   <div class="text-center mb-8">
     <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-3">AI Integration</h2>
     <p class="text-gray-600 dark:text-gray-400 leading-relaxed">

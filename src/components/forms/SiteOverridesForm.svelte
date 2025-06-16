@@ -93,7 +93,7 @@
     </p>
   </div>
 
-  <div class="max-w-4xl mx-auto">
+  <div>
     <!-- Common domain presets -->
     <div class="mb-8">
       <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-4">
