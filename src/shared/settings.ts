@@ -16,8 +16,8 @@ export interface DomainOverride {
 
 export const DEFAULT_SETTINGS: ButtonSettings = {
   enabled: true,
-  offsetX: 16,
-  offsetY: 4,
+  offsetX: -8,
+  offsetY: -8,
   buttonSize: 32,
   showOnHover: false,
   autoHide: true,
