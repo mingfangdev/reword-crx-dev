@@ -109,11 +109,11 @@ class FloatingButtonManager {
       log('Received message:', request.type)
       if (request.type === 'SETTINGS_UPDATED') {
         this.settings = { ...this.settings, ...request.settings }
-        this.updateButtonAppearance()
+        this.handleSettingsUpdate()
         sendResponse({ success: true })
       } else if (request.type === 'DOMAIN_OVERRIDES_UPDATED') {
         this.domainOverrides = request.overrides
-        this.updateButtonAppearance()
+        this.handleSettingsUpdate()
         sendResponse({ success: true })
       }
     })
@@ -123,7 +123,7 @@ class FloatingButtonManager {
 
   private handleMouseOver(event: MouseEvent) {
     const effectiveSettings = this.getEffectiveSettings()
-    if (!effectiveSettings.showOnHover) return
+    if (!effectiveSettings.enabled || !effectiveSettings.showOnHover) return
 
     const target = event.target as HTMLElement
     const config = this.detectInputElement(target)
@@ -134,7 +134,7 @@ class FloatingButtonManager {
 
   private handleMouseOut(event: MouseEvent) {
     const effectiveSettings = this.getEffectiveSettings()
-    if (!effectiveSettings.showOnHover) return
+    if (!effectiveSettings.enabled || !effectiveSettings.showOnHover) return
 
     setTimeout(() => {
       const hoveredElement = document.elementFromPoint(event.clientX, event.clientY)
@@ -156,6 +156,10 @@ class FloatingButtonManager {
     if (config) {
       const effectiveSettings = this.getEffectiveSettings()
       log('Effective settings:', effectiveSettings)
+      if (!effectiveSettings.enabled) {
+        log('Extension is disabled, not showing button')
+        return
+      }
       if (!effectiveSettings.showOnHover) {
         log('Showing button for element:', target.tagName, target.className)
         this.showButton(config)
@@ -226,6 +230,13 @@ class FloatingButtonManager {
   private showButton(config: ElementConfig) {
     log('showButton called for:', config.type, config.element)
     
+    // Check if extension is enabled before showing button
+    const effectiveSettings = this.getEffectiveSettings()
+    if (!effectiveSettings.enabled) {
+      log('Extension is disabled, not showing button')
+      return
+    }
+    
     // Remove existing button if any
     this.hideButton()
 
@@ -241,8 +252,6 @@ class FloatingButtonManager {
       pointer-events: auto;
       background: transparent;
     `
-
-    const effectiveSettings = this.getEffectiveSettings()
 
     try {
       // Mount Svelte component
@@ -538,6 +547,20 @@ class FloatingButtonManager {
     }
     
     this.currentTarget?.addEventListener('input', handleInput)
+  }
+
+  private handleSettingsUpdate() {
+    const effectiveSettings = this.getEffectiveSettings()
+    
+    // If extension is disabled, hide any existing button
+    if (!effectiveSettings.enabled) {
+      log('Extension disabled, hiding button')
+      this.hideButton()
+      return
+    }
+    
+    // Update button appearance if it exists and extension is enabled
+    this.updateButtonAppearance()
   }
 }
 

@@ -1,4 +1,5 @@
 export interface ButtonSettings {
+  enabled: boolean
   offsetX: number
   offsetY: number
   buttonSize: number
@@ -14,6 +15,7 @@ export interface DomainOverride {
 }
 
 export const DEFAULT_SETTINGS: ButtonSettings = {
+  enabled: true,
   offsetX: 16,
   offsetY: 4,
   buttonSize: 32,

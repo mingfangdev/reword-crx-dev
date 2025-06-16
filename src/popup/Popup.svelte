@@ -51,227 +51,53 @@
   }
 </script>
 
-<main>
-  <div class="header">
-    <h3>✏️ Reword Settings</h3>
-  </div>
-
-  <div class="quick-settings">
-    <div class="setting-row">
-      <label for="offsetX">X Offset:</label>
-      <input
-        id="offsetX"
-        type="number"
-        bind:value={settings.offsetX}
-        min={SETTINGS_CONSTRAINTS.offsetX.min}
-        max={SETTINGS_CONSTRAINTS.offsetX.max}
-        class="offset-input"
-      />
-      <span class="unit">px</span>
+<main class="w-80 min-h-0 bg-white dark:bg-gray-800">
+  <div class="p-6">
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <h3 class="text-xl font-bold text-gray-800 dark:text-white m-0 flex items-center justify-center gap-2">
+        <span>✏️</span>
+        <span>Reword Settings</span>
+      </h3>
     </div>
 
-    <div class="setting-row">
-      <label for="offsetY">Y Offset:</label>
-      <input
-        id="offsetY"
-        type="number"
-        bind:value={settings.offsetY}
-        min={SETTINGS_CONSTRAINTS.offsetY.min}
-        max={SETTINGS_CONSTRAINTS.offsetY.max}
-        class="offset-input"
-      />
-      <span class="unit">px</span>
+    <!-- Quick Settings (Empty for now) -->
+    <div class="mb-6">
+      <!-- Extension Enable/Disable Toggle -->
+      <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div class="flex flex-col">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="enabled">
+            Extension Enabled
+          </label>
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            Turn off to completely disable the extension
+          </span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            id="enabled"
+            bind:checked={settings.enabled}
+            class="sr-only peer"
+          />
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
     </div>
 
-    <div class="setting-row">
-      <label for="size">Size:</label>
-      <input
-        id="size"
-        type="range"
-        bind:value={settings.buttonSize}
-        min={SETTINGS_CONSTRAINTS.buttonSize.min}
-        max={SETTINGS_CONSTRAINTS.buttonSize.max}
-        class="slider"
-      />
-      <span class="value">{settings.buttonSize}px</span>
+    <!-- Actions -->
+    <div class="flex justify-center flex-col gap-4">      
+      <button 
+        class="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg text-base cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/25 active:scale-95"
+        on:click={openOptionsPage}
+      >
+        More Options
+      </button>
+      {#if saved}
+        <div class="text-green-500 text-sm font-semibold text-center mt-4">
+          ✓ Saved!
+        </div>
+      {/if}
     </div>
-
-    <div class="setting-row">
-      <label class="checkbox-label">
-        <input type="checkbox" bind:checked={settings.showOnHover} />
-        Show on hover only
-      </label>
-    </div>
-
-    <div class="setting-row">
-      <label class="checkbox-label">
-        <input type="checkbox" bind:checked={settings.autoHide} />
-        Auto-hide when unfocused
-      </label>
-    </div>
-
-
-  </div>
-
-  <div class="actions">
-    {#if saved}
-      <div class="saved-indicator">✓ Saved!</div>
-    {/if}
-    <button class="options-btn" on:click={openOptionsPage}> More Options </button>
   </div>
 </main>
-
-<style>
-  :global(:root) {
-    font-family:
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      Roboto,
-      sans-serif;
-    color-scheme: light dark;
-  }
-
-  :global(body) {
-    margin: 0;
-    width: 320px;
-    background: #f8f9fa;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(body) {
-      background: #1a1a1a;
-      color: #ffffff;
-    }
-  }
-
-  main {
-    padding: 16px;
-    background: white;
-    border-radius: 8px;
-    margin: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    main {
-      background: #2a2a2a;
-    }
-  }
-
-  .header {
-    text-align: center;
-    margin-bottom: 16px;
-  }
-
-  h3 {
-    color: #667eea;
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-  }
-
-  .quick-settings {
-    margin-bottom: 16px;
-  }
-
-  .setting-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    font-size: 0.9rem;
-    gap: 8px;
-  }
-
-  label {
-    font-weight: 500;
-    color: #555;
-    min-width: 70px;
-    flex-shrink: 0;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    label {
-      color: #ccc;
-    }
-  }
-
-  .checkbox-label {
-    display: flex;
-    align-items: center;
-    min-width: auto;
-    cursor: pointer;
-    flex: 1;
-  }
-
-  .checkbox-label input {
-    margin-right: 8px;
-  }
-
-  .offset-input {
-    width: 60px;
-    padding: 4px 6px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    text-align: center;
-    background: white;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .offset-input {
-      background: #333;
-      border-color: #555;
-      color: #fff;
-    }
-  }
-
-  .slider {
-    flex: 1;
-    margin: 0 8px;
-    accent-color: #667eea;
-  }
-
-  .value, .unit {
-    font-size: 0.8rem;
-    color: #667eea;
-    font-weight: 600;
-    min-width: 35px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  .actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .saved-indicator {
-    color: #22c55e;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
-  .options-btn {
-    padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .options-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  input[type='checkbox'] {
-    accent-color: #667eea;
-  }
-</style>
