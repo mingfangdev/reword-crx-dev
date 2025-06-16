@@ -6,8 +6,10 @@
     loadSettings,
     saveSettings as saveSettingsToStorage,
     sendSettingsUpdateToTabs,
-  } from '../shared/settings'
-  import type { ButtonSettings } from '../shared/settings'
+  } from '@shared/settings'
+  import type { ButtonSettings } from '@shared/settings'
+  import Toggle from '@ui/Toggle.svelte'
+  import Button from '@ui/Button.svelte'
 
   // Use centralized default settings
   let settings: ButtonSettings = { ...DEFAULT_SETTINGS }
@@ -64,35 +66,24 @@
     <!-- Quick Settings (Empty for now) -->
     <div class="mb-6">
       <!-- Extension Enable/Disable Toggle -->
-      <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <div class="flex flex-col">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="enabled">
-            Extension Enabled
-          </label>
-          <span class="text-xs text-gray-500 dark:text-gray-400">
-            Turn off to completely disable the extension
-          </span>
-        </div>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            id="enabled"
-            bind:checked={settings.enabled}
-            class="sr-only peer"
-          />
-          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-        </label>
-      </div>
+      <Toggle
+        bind:checked={settings.enabled}
+        label="Extension Enabled"
+        description="Turn off to completely disable the extension"
+        id="enabled"
+      />
     </div>
 
     <!-- Actions -->
     <div class="flex justify-center flex-col gap-4">      
-      <button 
-        class="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg text-base cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/25 active:scale-95"
+      <Button
+        variant="primary"
+        size="large"
+        class="w-full"
         on:click={openOptionsPage}
       >
         More Options
-      </button>
+      </Button>
       {#if saved}
         <div class="text-green-500 text-sm font-semibold text-center mt-4">
           ✓ Saved!

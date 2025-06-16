@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import type { ButtonSettings } from '../shared/settings'
-  import { env, isDev } from '../shared/env'
+  import type { ButtonSettings } from '@shared/settings'
+  import { env, isDev } from '@shared/env'
 
   export let settings: ButtonSettings
 
