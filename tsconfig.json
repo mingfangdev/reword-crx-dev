@@ -23,7 +23,8 @@
       "@forms/*": ["src/components/forms/*"],
       "@layout/*": ["src/components/layout/*"],
       "@shared/*": ["src/shared/*"],
-      "@options/*": ["src/options/*"]
+      "@options/*": ["src/options/*"],
+      "@prompts/*": ["src/prompts/*"],
     }
   },
   "include": ["src"],

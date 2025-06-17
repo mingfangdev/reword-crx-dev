@@ -8,8 +8,8 @@
   const baseClasses = 'font-medium rounded-lg transition-all duration-200 focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
   
   $: variantClasses = {
-    primary: 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white focus:ring-indigo-500 hover:transform hover:-translate-y-0.5 hover:shadow-lg',
-    secondary: 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 focus:ring-gray-500',
+    primary: 'bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 text-white focus:ring-violet-500 hover:transform hover:-translate-y-0.5 hover:shadow-lg',
+    secondary: 'bg-[#505F79] hover:bg-[#42526E] text-white focus:ring-[#505F79]',
     danger: 'bg-red-500 hover:bg-red-600 text-white focus:ring-red-500',
     success: 'bg-green-500 hover:bg-green-600 text-white focus:ring-green-500'
   }[variant]
