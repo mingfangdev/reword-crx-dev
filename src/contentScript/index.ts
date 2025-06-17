@@ -1,9 +1,9 @@
+import '../app.css'
 import EditButton from './EditButton.svelte'
 import JiraButton from './JiraButton.svelte'
 import JiraModal from './JiraModal.svelte'
-import OpenAI from 'openai'
 import { DEFAULT_SETTINGS, type ButtonSettings, loadSettings } from '../shared/settings'
-import { env } from '../shared/env'
+import { generateText } from '../shared/openai'
 
 // Add debug logging (only in development)
 const DEBUG = import.meta.env.MODE === 'development'
@@ -338,13 +338,8 @@ class EditButtonManager {
 
   private async rewordText() {
     const effectiveSettings = this.getEffectiveSettings()
-    const apiKey = effectiveSettings.openRouterApiKey || env.OPEN_ROUTER_API
 
-    if (!this.currentTarget || this.isProcessing || !apiKey) {
-      if (!apiKey) {
-        alert('Please set your OpenRouter API key in the extension settings or .env file.')
-        return
-      }
+    if (!this.currentTarget || this.isProcessing) {
       return
     }
 
@@ -359,40 +354,21 @@ class EditButtonManager {
     this.updateButtonState('processing')
 
     try {
-      const openai = new OpenAI({
-        baseURL: 'https://openrouter.ai/api/v1',
-        apiKey: apiKey,
-        defaultHeaders: {
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Reword Extension',
-        },
-        dangerouslyAllowBrowser: true,
+      const result = await generateText({
+        prompt: effectiveSettings.rewordPrompt,
+        content: selectedText,
+        apiKey: effectiveSettings.openRouterApiKey
       })
 
-      const completion = await openai.chat.completions.create({
-        model: 'deepseek/deepseek-chat-v3-0324:free',
-        messages: [
-          {
-            role: 'system',
-            content: effectiveSettings.rewordPrompt,
-          },
-          {
-            role: 'user',
-            content: selectedText,
-          },
-        ],
-      })
-
-      const rewordedText = completion.choices[0]?.message?.content
-      if (rewordedText) {
-        this.replaceSelectedText(rewordedText.trim())
+      if (result.success && result.text) {
+        this.replaceSelectedText(result.text)
         this.updateButtonState('success')
       } else {
-        throw new Error('No response from AI')
+        throw new Error(result.error || 'Failed to generate text')
       }
     } catch (error) {
       console.error('Error rephrasing text:', error)
-      alert('Error rephrasing text. Please check your API key and try again.')
+      alert(`Error rephrasing text: ${error instanceof Error ? error.message : 'Unknown error'}`)
       this.updateButtonState('error')
     } finally {
       this.isProcessing = false

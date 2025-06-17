@@ -4,3 +4,15 @@ globs:
 alwaysApply: true
 ---
 Using bun as the default dependency node package manager.
+
+A form label must be associated with a control.
+
+Use the following import aliases:
+- "@/*": "src/*"
+- "@components/*": "src/components/*"
+- "@ui/*": "src/components/ui/*"
+- "@forms/*": "src/components/forms/*"
+- "@layout/*": "src/components/layout/*"
+- "@shared/*": "src/shared/*"
+- "@options/*": "src/options/*
+

@@ -1,7 +1,6 @@
 import { crx } from '@crxjs/vite-plugin'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
 import sveltePreprocess from 'svelte-preprocess'
 import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
@@ -22,7 +21,6 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       tsconfigPaths(),
-      tailwindcss(),
       crx({ manifest }),
       svelte({
         compilerOptions: {
@@ -30,6 +28,7 @@ export default defineConfig(({ mode }) => {
         },
         preprocess: sveltePreprocess(),
       }),
+      tailwindcss(),
     ],
     legacy: {
       skipWebSocketTokenCheck: true,
